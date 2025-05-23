@@ -40,7 +40,6 @@ export const startServer = async () => {
       host: "0.0.0.0",
     });
     fastify.log.info(`Server listening on ${Number(process.env?.PORT!)}`);
-    await bot.start();
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
