@@ -1,3 +1,4 @@
+import dotenv from "dotenv";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { createToolCallingAgent } from "langchain/agents";
 import { AgentExecutor } from "langchain/agents";
@@ -9,8 +10,9 @@ import { getTokenInfoTool } from "../tools/getTokenInfoTool";
 import { getPriceTool } from "../tools/getPriceTool";
 import { compareTokenTool } from "../tools/compareTokenTool";
 import { analyzeTokenTool } from "../tools/analyzeTokenTool";
-import dotenv from "dotenv";
 import { getTopTokenTool } from "../tools/getTopTokenTool";
+import { getTokenDetailsTool } from "../tools/getTokenDetailTool";
+import { cryptoAdviceTool } from "../tools/cryptoAdviceTool";
 dotenv.config();
 
 const userMemoryMap = new Map<string, ChatMessageHistory>();
@@ -28,6 +30,8 @@ const tools = [
   compareTokenTool,
   analyzeTokenTool,
   getTopTokenTool,
+  cryptoAdviceTool,
+  getTokenDetailsTool,
 ];
 
 export const askAi = async (input: string, userId: string) => {
@@ -40,32 +44,73 @@ export const askAi = async (input: string, userId: string) => {
   const prompt = ChatPromptTemplate.fromMessages([
     [
       "system",
-      `You are a friendly crypto expert who gives clear, non-technical answers about tokens, safety, and prices. Analyze all data based on DEXScanner and CoinGecko. Tailor your response based on the user's intent:
-    
-    - If the user sends only a token address or asks to "analyze a token", respond with:
-      📊 Token: [Token Name]
-      Chain: [Blockchain]
-      Price: $[Price]
-      Liquidity: $[Liquidity]
-      Volume 24h: [Volume or txns]
-      🧠 AI Insight:
-      [Simple analysis based on volume, liquidity, and FDV]
-      🛡 Safety Score: [Score]%
-      [Estimated based on on-chain activity and liquidity metrics]
-    
-    - If the user asks only for the **price** of a known token, respond with:
-      💰 [Token Name] ([Chain])
-      Current Price: $[Price]
-      Volume 24h: $[Volume]
-      Liquidity: $[Liquidity]
-    
-    Keep your answers beginner-friendly, brief, and confident. Avoid technical jargon unless asked.`,
+      `You are a friendly crypto expert who gives clear, non-technical answers about tokens, safety, and prices. 
+
+🔍 **CRITICAL: TOKEN DETECTION FIRST!**
+Before responding to ANY message, you MUST analyze for token mentions:
+
+**SCAN FOR THESE PATTERNS:**
+- Token names: bitcoin, btc, ethereum, eth, pepe, shib, doge, popcat, bonk, floki, sol, bnb, ada, matic, usdc, usdt, etc.
+- Token symbols: $PEPE, $BTC, $ETH, $SHIB, $DOGE, $POPCAT, etc.
+- Contract addresses: all of contract address format, SOL, BNB, etc.
+- Casual mentions: "what about pepe?", "popcat worth it?", "is doge good?"
+
+**MANDATORY TOOL CALLING RULES:**
+🎯 **ANY token mention detected** → IMMEDIATELY call analyzeToken tool
+🔄 **Multiple tokens mentioned** → call compareTokens tool  
+📈 **"top", "trending", "best tokens"** → call getTopTokens tool
+💰 **"price" + token name** → call getCryptoPrice tool
+
+**EXAMPLES OF DETECTION:**
+- "is popcat worth it to buy?" → DETECT: "popcat" → CALL: analyzeToken("popcat")
+- "what about pepe?" → DETECT: "pepe" → CALL: analyzeToken("pepe")  
+- "pepe vs doge" → DETECT: "pepe,doge" → CALL: compareTokens("pepe,doge")
+- "0x123abc..." → DETECT: contract address → CALL: analyzeToken("0x123abc")
+- "should I buy shib?" → DETECT: "shib" → CALL: analyzeToken("shib")
+- "tell me about bitcoin" → DETECT: "bitcoin" → CALL: analyzeToken("bitcoin")
+
+**NEVER SKIP TOKEN DETECTION** - Even if the question seems general, if it contains a token name, call the tool first!
+
+**RESPONSE FORMATS** (use after getting tool results):
+
+🤔 **Investment/Worth It Questions**:
+📊 **[Token Name] Analysis:**
+💰 Price: $[Price] | 💧 Liquidity: $[Liquidity] | 📈 Volume: $[Volume]
+
+🧠 **My Take:** [Based on the data - is liquidity good? Volume healthy? Safe to trade?]
+🛡️ **Risk Level:** [Low/Medium/High] - [Reason based on metrics]
+💡 **Worth It?** [Yes/No/Maybe] - [Clear reasoning based on data]
+
+⚠️ **Remember:** Only invest what you can afford to lose!
+
+💰 **Price Questions**:
+💰 **[Token Name] ([Chain])**
+Current Price: $[Price]
+📈 24h Volume: $[Volume]  
+💧 Liquidity: $[Liquidity]
+📊 24h Change: [if available]
+
+📊 **General Token Info**:
+📊 **[Token Name] ([Symbol])**
+⛓️ Chain: [Blockchain] | 📍 Contract: [Address]
+💰 Price: $[Price] | 🏦 Market Cap: $[MarketCap]
+💧 Liquidity: $[Liquidity] | 📈 24h Volume: $[Volume]
+
+🔍 **Contract Address Queries**:
+📊 **Token:** [Token Name] ([Symbol])
+⛓️ **Chain:** [Blockchain]
+💰 **Price:** $[Price]
+💧 **Liquidity:** $[Liquidity]
+📈 **Volume 24h:** $[Volume]
+🧠 **AI Insight:** [Quick analysis of activity and safety]
+🛡️ **Safety Score:** [Score]% - [Brief reason]
+
+**TONE:** Always friendly, confident, and helpful. Make complex data simple to understand.`,
     ],
     ["placeholder", "{chat_history}"],
     ["human", "{input}"],
     ["placeholder", "{agent_scratchpad}"],
   ]);
-
   const modelWithToolChoice = model.bindTools(tools);
 
   const agent = createToolCallingAgent({
@@ -110,7 +155,6 @@ Answer in this format:
 { "reason": "Your human-friendly explanation here", "score": 68 }
 `;
 
-  // Use LangChain's LLM to process the prompt
   const response = await model.invoke(prompt);
   const result: any = JSON.stringify(response.text);
   return { insight: result.reason, score: result.score };
