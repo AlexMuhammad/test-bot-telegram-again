@@ -34,11 +34,11 @@ const tools = [
   getTokenDetailsTool,
 ];
 
-export const askAi = async (input: string, userId: string) => {
-  let memory = userMemoryMap.get(userId);
+export const askAi = async (input: string, chatId: string) => {
+  let memory = userMemoryMap.get(chatId);
   if (!memory) {
     memory = new ChatMessageHistory();
-    userMemoryMap.set(userId, memory);
+    userMemoryMap.set(chatId, memory);
   }
 
   const prompt = ChatPromptTemplate.fromMessages([
@@ -125,7 +125,7 @@ Current Price: $[Price]
     verbose: true,
   });
 
-  const config = { configurable: { sessionId: userId } };
+  const config = { configurable: { sessionId: chatId } };
 
   const agentExecutorWithMemory = new RunnableWithMessageHistory({
     runnable: executor,
