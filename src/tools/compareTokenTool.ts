@@ -12,8 +12,7 @@ const formatData = (data: TokenData) => {
 
 export const compareTokenTool = new DynamicTool({
   name: "compareTokens",
-  description:
-    "Compare two crypto tokens by contract address or CoinGecko name. Input format: token1,token2 (e.g., pepe,doge or 0xabc...,0xdef...)",
+  description: `Compare two crypto tokens side by side. Use this tool when the user explicitly asks to compare tokens (e.g., "compare pepe and doge"). Input format must be two tokens separated by comma: "token1,token2"`,
   func: async (input: string) => {
     const [tokenA, tokenB] = input.split(",").map((t) => t.trim());
 

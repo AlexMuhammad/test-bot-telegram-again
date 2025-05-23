@@ -1,8 +1,9 @@
 import { Bot } from "grammy";
 import { handleMessage } from "./handlers";
+import dotenv from "dotenv";
 
 export const startBot = () => {
-  const bot = new Bot("7407905687:AAF928REVNffUsplaeUau2b496QzQX1-D18");
+  const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN!);
   bot.on("message:text", handleMessage);
   bot.command("start", (ctx) =>
     ctx.reply("🤖 I can analyze tokens and answer crypto questions!")
