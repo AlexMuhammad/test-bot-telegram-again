@@ -89,7 +89,7 @@ export const askAi = async (input: string, userId: string) => {
     historyMessagesKey: "chat_history",
   });
 
-  const result = await executor.invoke({ input }, config);
+  const result = await agentExecutorWithMemory.invoke({ input }, config);
 
   return result.output;
 };
