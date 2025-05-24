@@ -24,6 +24,7 @@ export const handleMessage = async (ctx: Context) => {
     await logQuery(Number(chatId), Number(userId), input, response);
     return await ctx.reply(response, { parse_mode: "Markdown" });
   } catch (err) {
+    console.log("error", err);
     return await ctx.reply("⚠️ Sorry, something went wrong. Please try again.");
   }
 };
